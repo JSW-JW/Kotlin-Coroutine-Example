@@ -16,13 +16,20 @@ class MainActivity : AppCompatActivity() {
 
         button.setOnClickListener {
            CoroutineScope(IO).launch { // CoroutineScope extends CoroutineBuilder
-               val data = fakeApiRequest()
-
-               withContext(Main) {
-                   text.text = data
-               }
+               val response = fakeApiRequest()
+               executeFunctionOnMainThread { setTextView(response) }
            }
         }
+    }
+
+    private suspend fun executeFunctionOnMainThread(myFunction : () -> Unit) {
+        withContext(Main) {
+            myFunction()
+        }
+    }
+
+    private fun setTextView(newText: String) {
+        text.text = newText
     }
 
     private suspend fun fakeApiRequest() : String {
