@@ -2,6 +2,7 @@ package com.codingwithmitch.kotlin_coroutine_example
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.ProgressBar
 import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
@@ -10,6 +11,8 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 
 class MainActivity : AppCompatActivity() {
+
+    private val TAG = "MainActivity"
 
     private val PROGRESS_MAX = 100
     private val PROGRESS_START = 0
@@ -23,14 +26,12 @@ class MainActivity : AppCompatActivity() {
 
         job_button.setOnClickListener {
             if (!::job.isInitialized) {
-                job = Job()
+                initJob()
             }
             job_progress_bar.startJobOrCancel(job)
         }
 
-
     }
-
 
     private fun initJob() {
         job_button.text = "Start Job #1"
@@ -47,12 +48,15 @@ class MainActivity : AppCompatActivity() {
                 showToast(msg)
             }
         }
+        job_progress_bar.max = PROGRESS_MAX
+        job_progress_bar.progress = PROGRESS_START
 
     }
 
-    private fun ProgressBar.startJobOrCancel(aJob: Job) {
+    private fun ProgressBar.startJobOrCancel(aJob: CompletableJob) {
         if (this.progress > 0) {
             resetJob(aJob)
+            Log.d("here", "first")
         } else {
             job_button.text = "Cancel Job #1"
             CoroutineScope(IO + aJob).launch {
@@ -60,22 +64,24 @@ class MainActivity : AppCompatActivity() {
                     delay(JOB_TIME / PROGRESS_MAX.toLong())
                     this@startJobOrCancel.progress = i
                 }
-                withContext(Main) {
-                    updateJobCompleteTextView("Job is complete!")
-                    this@startJobOrCancel.progress = 0
-                    resetJob(aJob)
-                    job_progress_bar.startJobOrCancel(job)
+                updateJobCompleteTextView("Job is complete!")
+                /* why job.complete() not make 'isCompleted' true inside coroutine scope? */
 
-                }
+                aJob.complete()
+                Log.d(TAG, "startJobOrCancel: " + aJob.isCompleted)
+
             }
 
 
         }
     }
 
-    private fun resetJob(job: Job) {
+    private fun resetJob(job: CompletableJob) {
         if (job.isActive || job.isCompleted) {
             job.cancel(CancellationException("Resetting job"))
+/*            Log.d(TAG, "resetJob: isComplete: " + job.isCompleted)
+            Log.d(TAG, "resetJob: isComplete: " + job.isActive)
+            Log.d(TAG, "resetJob: isComplete: " + job.isCancelled)*/
         }
         initJob()
     }
